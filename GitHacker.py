@@ -7,6 +7,7 @@ import requests
 import random
 import sys
 import re
+import traceback
 
 log = []
 
@@ -128,7 +129,7 @@ def handle_git_stash():
     os.system("rm -rf %s" % filename)
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print("Usage : ")
         print("        python GitHacker.py [Website]")
         print("Example : ")
@@ -142,6 +143,9 @@ def main():
 
     files = dirlist("./", [])
     baseurl = sys.argv[1]
+    zip_path = None
+    if len(sys.argv) > 2:
+        zip_path = sys.argv[2]
     baseurl = complete_url(baseurl)
     temppath = repalce_bad_chars(get_prefix(baseurl))
 
@@ -158,20 +162,26 @@ def main():
     master = open("./%s/.git/logs/refs/heads/master" % temppath, "r")
     print("[!] Downloading object files")
     for line in master:
-        prehash = line.split(" ")[0]
-        nexthash = line.split(" ")[1]
-        path = "./%s/.git/objects/%s/%s" % (temppath,
-                                            nexthash[0:2], nexthash[2:])
-        url = "%sobjects/%s/%s" % (
-            baseurl, nexthash[0:2], nexthash[2:])
-
         try:
-            os.makedirs("./%s/%s", (temppath, path))
-        except Exception as e:
-            print("[-] %s" % (e))
+            # 未改动
+            prehash = line.split(" ")[0]
+            nexthash = line.split(" ")[1]
+            path = "./%s/.git/objects/%s/%s" % (temppath,
+                                                nexthash[0:2], nexthash[2:])
+            url = "%sobjects/%s/%s" % (
+                baseurl, nexthash[0:2], nexthash[2:])
 
-        print((url, path))
-        downloadFile(url, path)
+            try:
+                os.makedirs("./%s/%s", (temppath, path))
+            except Exception as e:
+                print("[-] %s" % (e))
+
+            print((url, path))
+            downloadFile(url, path)
+            # 未改动
+        except Exception as e2:
+            print("[-] %s" % (e2))
+            traceback.print_tb(e2.__traceback__)
 
     print("[+] Start fixing missing files...")
     # download missing files
@@ -182,6 +192,9 @@ def main():
 
     print("[+] All file downloaded! Please enter the dir and type `git reflog` to show all log info!")
 
+    if zip_path:
+        os.system(f"zip -q -S -r {zip_path} ./{temppath}")
+        os.system(f"rm -rf ./{temppath}")
 if __name__ == "__main__":
     main()
 
